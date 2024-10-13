@@ -87,7 +87,8 @@ class Appointment(models.Model):
     is_approved_doc = models.BooleanField(default=False)
     amount_to_be_paid = models.CharField(max_length=5)
     remark = models.CharField(max_length=500,null = True)
-    
+    visited = models.BooleanField(default =False)
+    visited_doc = models.BooleanField(default=False)
     
 # class Spec_doc(models.Model):
 #     specialist_id = models.ForeignKey(Specialist,on_delete=models.SET_NULL,null=True)

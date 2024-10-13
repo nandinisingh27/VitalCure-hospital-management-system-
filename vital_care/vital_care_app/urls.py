@@ -15,7 +15,14 @@ urlpatterns = [
     path('list_specialisation/',views.list_specialisation),
     path('spec_doctor/',views.spec_doc),
     path('list_appoint/',views.list_appointments),
-    path('update_status/',views.update_status),
+    path('approve_status/',views.approve_appoint),
+    path('reject_appoint/',views.reject_appoint),
+    path('profile_details/',views.profile_details),
+    path('stats/',views.stats),
+    
+    
+    
+    
     
     
 ]+static(settings.MEDIA_URL,document_root=settings.MEDIA_ROOT)
