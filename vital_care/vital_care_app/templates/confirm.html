@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title></title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+    </head>
+    <style>
+body{
+    height:100%;
+}
+img{
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    width: 35%;
+}
+h1{
+    text-align: center;
+}
+table{
+    width:40%;
+    height:40%;
+    border: 2px black solid;
+    margin-top:100px;
+
+    margin-left: auto;
+    margin-right: auto;
+
+}
+th{
+    text-align:center;
+    margin-left: auto;
+    margin-right: auto;
+    
+}
+td{
+    border: 2px solid;
+}
+
+    </style>
+    <body>
+        <img src="image.png">   
+    <h1>APPOINTMENT CONFIRMED </h1>
+
+    <table>
+        <th>Appointment details</th>
+        <tr>
+            <td>
+                Name:
+            </td>
+            <td>{{name}}</td>
+        </tr>
+            <tr>
+                <td>Doctor name:</td>
+                <td>{{selected_doctor}}</td>
+            </tr>
+            <tr>
+                <td>Reason:</td>
+                <td>{{reason}}</td>
+            </tr>
+            <tr>
+                <td>Date of appointment:</td>
+                <td>{{preferred_date}}</td>
+            </tr>
+        </table>
+    </body></html>

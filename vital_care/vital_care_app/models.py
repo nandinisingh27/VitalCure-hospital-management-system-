@@ -14,7 +14,7 @@ class User(AbstractUser):
     is_doctor = models.BooleanField(default = False)
     is_patient = models.BooleanField(default = False)
     role = models.CharField(max_length=10)
-
+    image = models.ImageField(upload_to='images/', default = None)
     
     objects = UserManager()
 
@@ -34,7 +34,7 @@ class Patient(models.Model):
     gender = models.CharField(max_length=10)
     blood_group = models.CharField(max_length=5)
     medical_history = models.CharField(max_length=255)
-    date_of_birth = models.DateField(max_length=20)
+    date_of_birth = models.CharField(max_length=20)
     address = models.CharField(max_length =255)
     
 class Specialist(models.Model):
@@ -55,6 +55,7 @@ class Doctor(models.Model):
     experience = models.CharField(max_length=3)
     qualification = models.CharField(max_length=30)
     consultation_fee = models.CharField(max_length =5)
+    
 
 class Portal(models.Model):
     name = models.CharField(max_length=255)
@@ -89,8 +90,20 @@ class Appointment(models.Model):
     remark = models.CharField(max_length=500,null = True)
     visited = models.BooleanField(default =False)
     visited_doc = models.BooleanField(default=False)
+    payment_status = models.CharField(max_length=50,default="Pending")
+    is_prescribed = models.BooleanField(default=False)
     
-# class Spec_doc(models.Model):
-#     specialist_id = models.ForeignKey(Specialist,on_delete=models.SET_NULL,null=True)
-#     doctor_name = models.CharField(max_length=200)
+    
+class Prescription(models.Model):
+    appointment = models.ForeignKey(Appointment,on_delete=models.SET_NULL,null=True)
+    user = models.ForeignKey(User,on_delete=models.SET_NULL,null=True)
+    instruction = models.CharField(max_length=255)
+    medicine = models.CharField(max_length=255)
+    dosage = models.CharField(max_length=255)
+    days= models.CharField(max_length=255)
+    diagnosis = models.CharField(max_length=255)
+    
+    
+    
+
         

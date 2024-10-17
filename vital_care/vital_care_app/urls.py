@@ -19,6 +19,14 @@ urlpatterns = [
     path('reject_appoint/',views.reject_appoint),
     path('profile_details/',views.profile_details),
     path('stats/',views.stats),
+    path('doc_pat/',views.doc_patients),
+    path('records/',views.list_appointment_reports),
+    path('create_pres/',views.create_prescription),
+    path('list_pres/',views.list_prescription),
+    path('list_doc_pres/',views.list_doc_pres),
+    path('list_patients/',views.list_patients),
+    
+    
     
     
     
