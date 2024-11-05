@@ -1,7 +1,9 @@
-from django.templatetags.static import static
 import re
 from django_renderpdf.helpers import render_pdf
-
+from django_renderpdf.helpers import django_url_fetcher
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+from io import BytesIO
 from django.contrib.auth import authenticate, login, logout
 import json
 from django.http import JsonResponse
@@ -17,6 +19,7 @@ from .models import Prescription
 from .models import Specialist
 from .models import Portal_items
 from .models import Appointment
+from .models import Blood_group
 
 
 
@@ -30,6 +33,7 @@ def patient_register(request):
             return JsonResponse({'error':'Please enter a valid first name'},status =400)
         
         last_name = request.POST['last_name']
+        
         
         
         email = request.POST['email']
@@ -89,6 +93,7 @@ def patient_register(request):
         medical_history =request.POST['medical_history']
         
         
+        
         date_of_birth = request.POST['date_of_birth']
         if date_of_birth is  None:
             return JsonResponse({'error':'Please enter valid date of birth'},status =400)
@@ -112,15 +117,15 @@ def patient_register(request):
 
         user = User.objects.create_user(email=email,first_name=first_name,last_name=last_name,role = "Patient",is_doctor=0,is_patient=1,password=password,image = image)
         Patient.objects.create(user =user,email =email,first_name = first_name,last_name = last_name,phone_number= phone_number,height = height,weight =weight,age =age,gender = gender,blood_group = blood_group,medical_history = medical_history,date_of_birth=date_of_birth,address=address)
-        # mail =send_mail(
-        #     " Account created",
-        #     "Your VITALCURE patient account has been successfully created!!",
-        #     "nandinisingh52891@gmail.com",
-        #     [email],
-        #     fail_silently=False
-        # )
-        # if not mail:
-        #     return JsonResponse({"message":"Account created,but mail not sent!"},status =200)
+        mail =send_mail(
+            " Account created",
+            "Your VITALCURE patient account has been successfully created!!",
+            "nandinisingh52891@gmail.com",
+            [email],
+            fail_silently=False
+        )
+        if not mail:
+            return JsonResponse({"message":"Account created,but mail not sent!"},status =200)
         return JsonResponse({'message':'Patient Account created successfully!!'},status = 201)
 
     else:
@@ -201,15 +206,15 @@ def doctor_register(request):
             return JsonResponse({'error': 'User already exists!!,please try with another email address'},status=400)
         user  = User.objects.create_user(email=email,first_name=first_name,last_name=last_name,role = "Doctor",is_doctor=1,is_patient=0,password=password ,image =image)
         Doctor.objects.create(user = user ,spec_id = spec_id,email =email,first_name = first_name,last_name = last_name,phone_number= phone_number,age=age,gender = gender,specialist=specialist,experience =experience,qualification=qualification,consultation_fee = consultation_fee)
-        # mail = send_mail(
-        #     " Account created",
-        #     "Your VITALCURE doctor account has been successfully created!!",
-        #     "nandinisingh52891@gmail.com",
-        #     [email],
-        #     fail_silently=False
-        #     )
-        # if not mail:
-        #     return JsonResponse({"message":"Account created,but mail not sent!"},status =200)
+        mail = send_mail(
+            " Account created",
+            "Your VITALCURE doctor account has been successfully created!!",
+            "nandinisingh52891@gmail.com",
+            [email],
+            fail_silently=False
+            )
+        if not mail:
+            return JsonResponse({"message":"Account created,but mail not sent!"},status =200)
         return JsonResponse({'message':'Doctor account created successfully'},status =201)
 
 def login_user(request):
@@ -226,7 +231,12 @@ def login_user(request):
         if user is not None:
             login(request, user)
             role = user.role
-            return JsonResponse({'message':f'{role} successfully logged in',  'route': role}, status=200)
+            if role =="R":
+                return JsonResponse({'message':'Receptionist successfully logged in!'},status =200)
+            elif role=="D":
+                return JsonResponse({'message':'Doctor successfully logged in!'},status =200)
+            elif role=="P":
+                return JsonResponse({'message':'Patient successfully logged in!'},status =200)
 
         return JsonResponse({'error': 'Invalid credentials'}, status=401)
     else:
@@ -254,7 +264,7 @@ def side_menu(request):
         first_name = data[0]['first_name']
         last_name = data[0]['last_name']
         
-        if role == "Doctor":
+        if role == "D":
             doc_data = Doctor.objects.filter(email = user).values()
             speciality = doc_data[0]['specialist']
             details =[]
@@ -278,12 +288,12 @@ def side_menu(request):
                 final_item.append(value)
 
             return JsonResponse({'details':details, 'panel':final_item},status =200)
-        elif role == "Patient":
+        elif role == "P":
             patient_data = Patient.objects.filter(email = user).values()
             id = str(patient_data[0]['id'])
             item = Portal_items.objects.filter(user_type = role).values().order_by('order')
             details = []
-            name = first_name
+            name = first_name+" "+last_name
             val = {
                 'image':image,
                 'name':name,
@@ -309,7 +319,7 @@ def side_menu(request):
             val = {
                 'image':image,
                 'name':name,
-                'speciality':role,
+                'speciality':"Receptionist",
                 'first_name':first_name
             }
             details.append(val)
@@ -328,32 +338,48 @@ def side_menu(request):
         
 def list_doctors(request):
     if request.method =="GET":
-        doc = Doctor.objects.all().values()
         data = User.objects.filter(is_doctor=1).values()
+        id_list=[]
+        for i in range(len(data)):
+            id = data[i]['id']
+            id_list.append(id)
         details =[]
-        for det in doc:
-            values = {
-                'image':data[0]['image'],
-                'first_name':"Dr. " + det['first_name'],
-                'last_name':det['last_name'],
-                'specialist':det['specialist'],
-                'experience':det['experience'],
-                'consultation_fee':det['consultation_fee'],
-                'qualification':det['qualification']
-            }
-            details.append(values)
+        for id in id_list:
+            doc_data = User.objects.filter(id =id).values()
+            doc_details = Doctor.objects.filter(user_id =id).values()
+            img = doc_data[0]['image']
+            for det in doc_details :
+                values = {
+                    
+                    'img':img,
+                    'first_name':"Dr. " + det['first_name'],
+                    'last_name':det['last_name'],
+                    'specialist':det['specialist'],
+                    'experience':det['experience'],
+                    'consultation_fee':det['consultation_fee'],
+                    'qualification':det['qualification']
+                    }
+                details.append(values)
+
         return JsonResponse({'details':details},status = 200)
     else:
         return JsonResponse({'error':'Invalid method'},status = 405)
 
 def list_patients(request):
     if request.method=="GET":
-        patient = Patient.objects.all().values()
         data = User.objects.filter(is_patient=1).values()
-        details =[]
-        for det in patient:
-            val={
-                'image':data[0]['image'],
+        id_list=[]
+        details=[]
+        for i in range(len(data)):
+            id = data[i]['id']
+            id_list.append(id)
+        for id in id_list:
+            pat_data = User.objects.filter(id =id).values()
+            pat_details = Patient.objects.filter(user_id =id).values()
+            img = pat_data[0]['image']
+            for det in pat_details:
+                val={
+                'image':img,
                 'first_name':det['first_name'],
                 'last_name':det['last_name'],
                 'email':det['email'],
@@ -363,11 +389,11 @@ def list_patients(request):
                 'age':det['age'],
                 'gender':det['gender'],
                 'blood_group':det['blood_group'],
-                'medical_history':det['medical_history'],
+                'medical_history':det['medical_history']or "NULL",
                 'date_of_birth':det['date_of_birth'],
                 'address':det['address']
-            }
-            details.append(val)
+                }
+                details.append(val)
         return JsonResponse({'details':details},status =200)
     else:
         return JsonResponse({'error':'Invalid method'},status =405)
@@ -379,7 +405,7 @@ def appointment_schedule(request):
         role = data[0]['role']
         role =data[0]['role']
         id = data[0]['id']
-        if role == "Patient":
+        if role == "P":
             details = Patient.objects.filter(email = user).values()
         
             patientID = details[0]['id']
@@ -421,6 +447,20 @@ def list_specialisation(request):
         return JsonResponse({'list':doc_det},status=200)
     else:
         return JsonResponse({'error':'Invalid method'},status =405)    
+    
+def list_blood_group(request):
+    if request.method=="GET":
+        det = Blood_group.objects.all().values()
+        details =[]
+        for item in det:
+            val = {
+                'id':item['id'],
+            'blood_grp':item['blood_group']
+            }
+            details.append(val)
+        return JsonResponse({'list':details},status = 200)
+    else:
+        return JsonResponse({'error':'Invalid Method'},status=405)
 def spec_doc(request):
     if request.method =="POST":
         data = json.loads(request.body)
@@ -522,26 +562,38 @@ def approve_appoint(request):
             details.is_approved_doc = approved
             details.visited_doc = approved
             details.save()
-            context = {
+            content = {
                 'name':det[0]['name'],
             'doctor_selected':det[0]['doctor_selected'],
             'reason':det[0]['reason'],
             'preferred_date':det[0]['preferred_date']
             }
-            print(context)
-            pdf_file = render_pdf('confirm.html', context)
+            
+            pdf_file= BytesIO()
+            url_fetcher=django_url_fetcher
+            template = 'confirm.html'
+            
+            
+            render_pdf('confirm.html',pdf_file,content)
+            
+            pdf_size =pdf_file.getbuffer().nbytes
+            print(pdf_size)
+            if pdf_size == 0:
+                return JsonResponse({'message':'Appointment approved but PDF generation failed!'},status =200)
             email_subject = "Appointment Confirmation"
             email_body = "Please find attachment containing details of your appointment confirmation."
-            email = EmailMessage(
+            pdf_file.seek(0)
+            email = EmailMultiAlternatives(
             email_subject,
             email_body,
             'nandinisingh52891@gmail.com',
             [email_pat]
             )
+            pdf_content = pdf_file.read()
     
-            email.attach(f'appointment_{id}.pdf', pdf_file.content, 'application/pdf')
+            email.attach(f'appointment_{id}.pdf',pdf_content,'application/pdf')
             email.send()
-            return JsonResponse({"message":"Appointment approved"},status =200)
+            return JsonResponse({"message": "Appointment approved"}, status=200)
         
         
         else:
@@ -574,13 +626,13 @@ def reject_appoint(request):
             details.save()
             info = Appointment.objects.filter(id=id).values()
             email_pat = info[0]['email']
-        #     send_mail(
-        #     "Appointment rejected",
-        #     "Your appointment request has been rejected due to the following reason: "+remark,
-        #     "nandinisingh52891@gmail.com",
-        #     [email_pat],
-        #     fail_silently=False
-        # )
+            send_mail(
+            "Appointment rejected",
+            "Your appointment request has been rejected due to the following reason: "+remark,
+            "nandinisingh52891@gmail.com",
+            [email_pat],
+            fail_silently=False
+        )
             return JsonResponse({'message':'Appointment rejected'},status = 200)
     
         
@@ -594,19 +646,18 @@ def reject_appoint(request):
             approved=0
             visit =1
             details.remark = remark
-            details.is_approved_recep = approved
-            details.visited = visit
             details.visited_doc = visit
+            details.is_approved_doc=approved
             details.save()
             info = Appointment.objects.filter(id=id).values()
             email_pat = info[0]['email']
-        #     send_mail(
-        #     "Appointment rejected",
-        #     "Your appointment request has been rejected due to the following reason: "+remark,
-        #     "nandinisingh52891@gmail.com",
-        #     [email_pat],
-        #     fail_silently=False
-        # )
+            send_mail(
+            "Appointment rejected",
+            "Your appointment request has been rejected due to the following reason: "+remark,
+            "nandinisingh52891@gmail.com",
+            [email_pat],
+            fail_silently=False
+        )
             
             return JsonResponse({'message':'Appointment rejected'},status = 200)
         
@@ -677,7 +728,6 @@ def profile_details(request):
                     'height':item['height'],
                     'weight':item['weight'],
                     'age':item['age'],
-                    
                     'blood_group':item['blood_group'],
                     'medical_history':item['medical_history'],
                     'blood_group':item['blood_group'],
@@ -712,7 +762,9 @@ def stats(request):
             num_reject_recep = Appointment.objects.filter(visited=1).filter(is_approved_recep =0).count()
             num_reject_doc = Appointment.objects.filter(visited =1).filter(is_approved_recep=1).filter(visited_doc =1).filter(is_approved_doc =0).count()
             num_reject = num_reject_recep + num_reject_doc
-            num_pending = Appointment.objects.filter(visited =1).filter(is_approved_recep=1).filter(visited_doc=0).count()
+            num_pending_recep = Appointment.objects.filter(visited=0).count()
+            num_pending_doc = Appointment.objects.filter(visited =1).filter(is_approved_recep=1).filter(visited_doc=0).count()
+            num_pending =num_pending_doc+num_pending_recep
             details =[]
             val ={
                 'doctor_registered':num_docregister,
@@ -730,11 +782,13 @@ def stats(request):
             return JsonResponse({'details':details},status=200)
         elif is_doctor==True:
             name = "Dr."+" " +data[0]['first_name'] + " "+ data[0]['last_name']
+            num = Appointment.objects.filter(doctor_selected = name).filter(visited =1).filter(is_approved_recep =1).count()
             num_approved = Appointment.objects.filter(doctor_selected = name).filter(visited =1).filter(is_approved_recep =1).filter(visited_doc=1).filter(is_approved_doc =1).count()
             num_reject = Appointment.objects.filter(visited =1).filter(is_approved_recep=1).filter(visited_doc =1).filter(is_approved_doc=0).filter(doctor_selected = name).count()
             num_pending = Appointment.objects.filter(doctor_selected = name).filter(visited =1).filter(is_approved_recep=1).filter(visited_doc=0).count()
             details=[]
             val={
+                'total_appointment':num,
                 'appointment_accepted':num_approved,
                 'appointment_rejected':num_reject,
                 'pending':num_pending,
@@ -744,14 +798,16 @@ def stats(request):
             
             return JsonResponse({'details':details},status =200)
         else:
-            name = data[0]['first_name'] 
+            name = data[0]['first_name']+" " + data[0]['last_name']
             app = Appointment.objects.filter(name =name).count()
             if app==0:
                 return JsonResponse({'message':'No data found for this user'},status =200)
             num = Appointment.objects.filter(name = name).filter(visited =1).filter(is_approved_recep =1).filter(visited_doc=1).filter(is_approved_doc =1).count()
             app =Appointment.objects.filter(name = name).filter(visited =1).filter(is_approved_recep =1).filter(visited_doc=1).filter(is_approved_doc =1).filter(is_prescribed =1).values().order_by('-id')
-            det=[]
             appp=Appointment.objects.filter(name = name).filter(visited =1).filter(is_approved_recep =1).filter(visited_doc=1).filter(is_approved_doc =1).filter(is_prescribed =1).values()
+            appointment = Appointment.objects.filter(name = name).filter(visited =1).filter(is_approved_recep =1).filter(visited_doc=1).filter(is_approved_doc =1).filter(is_prescribed =1).count()
+            if appointment == 0:
+                return JsonResponse({'message':'Nothing to display on this page'},status=200)
             id = appp[0]['id']
             det = Prescription.objects.filter(appointment_id = id).values()
             details =[]
@@ -768,11 +824,12 @@ def stats(request):
                 'appointment_id':id,
                 'instruction':item['instruction'],
                 'diagnosis':item['diagnosis'],
-                'medicine':date,  
+                'medicine':date, 
+                'number':num,
                 'role':role             
                 }
             details.append(val)
-            return JsonResponse({'list':details,'number':num},status =200)    
+            return JsonResponse({'details':details},status =200)    
     else:
         return JsonResponse({'error':'Invalid Method'},status =405)           
     
@@ -799,7 +856,7 @@ def doc_patients(request):
                 'is_prescribed':item['is_prescribed']
                 }
                 info.append(val)
-            return JsonResponse({'details':info,'role':role},status = 200)
+            return JsonResponse({'details':info},status = 200)
         else:
             return JsonResponse({'error':'You are not allowed to access this page'},status =400)
     else:
@@ -840,7 +897,7 @@ def list_appointment_reports(request):
             return JsonResponse({'details':details,'url':'records','role':role},status =200)
         elif is_doctor == True:
             name1 = "Dr. "+ user_det[0]['first_name']+ " " + user_det[0]['last_name']
-            data = Appointment.objects.filter(doctor_selected = name1).values().order_by('-id')
+            data = Appointment.objects.filter(doctor_selected = name1).filter(visited =1).filter(is_approved_recep=1).values().order_by('-id')
             details =[]
             for item in data:
                 val = {
@@ -934,40 +991,36 @@ def list_prescription(request):
         is_patient= user_det[0]['is_patient']
         if is_patient == True:
             name =user_det[0]['first_name']+ " "+ user_det[0]['last_name']
+            det = Appointment.objects.filter(name = name).filter(is_prescribed = 1).count()
+            if det==0:
+                return JsonResponse({'message':'Currently, no data exists for this user'},status =200)
+                
             app_det = Appointment.objects.filter(name = name).filter(is_prescribed = 1).values()
-            id_list =[]
-            for i in app_det:
-                val={
-                    i['id']
-                }
-                id_list.extend(val)
-            print(id_list)
+            doctor = app_det[0]['doctor_selected']
+            id = app_det[0]['id']
+            det = Prescription.objects.filter(appointment_id = id).values()
+            dt= Prescription.objects.filter(appointment_id = id).count()
+            if dt==0:
+                return JsonResponse({'message':'Currently, no data exists for this user'},status =200)
+            details =[]
+            date =[]
             
-            for i in range(len(id_list)):
-                print(i)
-                ID = id_list[i]
-                print(ID)
-                details = Prescription.objects.filter(appointment_id =ID).values()
-                det =[]
-                date =[]        
-                for item in details:
-                    values = {
+            for item in det:
+                values = {
                     'medicine':item['medicine'],
                     'dosage':item['dosage'],
                     'days':item['days']
-                    }
-                    print(values)
-                    date.append(values)
-                    val = {
-                    'appointment_id':ID,
-                    'instruction':item['instruction'],
-                    'diagnosis':item['diagnosis'],
-                    'medicine':date                  
-                    }
-                    print(val)
-                    det.insert(i,val)
-                    print(det)
-                    return JsonResponse({'list':det,'role':role},status =200)
+                }
+                date.append(values)
+            val = {
+                'appointment_id':id,
+                'doctor':doctor,
+                'instruction':item['instruction'],
+                'diagnosis':item['diagnosis'],
+                'medicine':date, 
+                }
+            details.append(val)
+            return JsonResponse({'list':details},status =200)
         else:
             return JsonResponse({'error':'You are not allowed to access this page!'},status = 400)
     else:

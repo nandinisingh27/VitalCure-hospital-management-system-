@@ -115,17 +115,16 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_USE_TLS = True
-EMAIL_PORT = 587
-EMAIL_HOST_USER = 'nandinisingh52891@gmail.com'
-EMAIL_HOST_PASSWORD = 'lgnd gwli oyle qfjm '
-# EMAIL_USE_SSL = True
+
 AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend', 
 )
-
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'nandinisingh52891@gmail.com'
+EMAIL_HOST_PASSWORD = 'lgnd gwli oyle qfjm'
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
 

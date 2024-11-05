@@ -3,7 +3,8 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.auth.models import AbstractUser
 from .manager import UserManager
-from .manager import UserManager
+from django.utils import timezone
+
 
 
 class User(AbstractUser):
@@ -26,7 +27,7 @@ class Patient(models.Model):
     email = models.EmailField(max_length=80)
     user  = models.OneToOneField(User,on_delete=models.SET_NULL,null=True)
     first_name = models.CharField(max_length=80)
-    last_name = models.CharField(max_length = 60)
+    last_name = models.CharField(max_length = 6)
     phone_number = models.CharField(max_length=10)
     height = models.CharField(max_length=5)
     weight = models.CharField(max_length=5)
@@ -39,6 +40,13 @@ class Patient(models.Model):
     
 class Specialist(models.Model):
     specialist_name = models.CharField(max_length = 50)
+    
+    
+class Blood_group(models.Model):
+    blood_group = models.CharField(max_length=5)
+
+class Gender(models.Model):
+    gender = models.CharField(max_length=10)
 
     
     
@@ -102,6 +110,7 @@ class Prescription(models.Model):
     dosage = models.CharField(max_length=255)
     days= models.CharField(max_length=255)
     diagnosis = models.CharField(max_length=255)
+    # date = models.DateTimeField(default = timezone.now)
     
     
     
