@@ -1,5 +1,7 @@
 import re
 from django_renderpdf.helpers import render_pdf
+from django.template.loader import render_to_string
+from weasyprint import HTML
 from django_renderpdf.helpers import django_url_fetcher
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
@@ -562,36 +564,39 @@ def approve_appoint(request):
             details.is_approved_doc = approved
             details.visited_doc = approved
             details.save()
-            content = {
-                'name':det[0]['name'],
+            context = {
+            'name':det[0]['name'],
             'doctor_selected':det[0]['doctor_selected'],
             'reason':det[0]['reason'],
             'preferred_date':det[0]['preferred_date']
             }
+            print(context)
             
             pdf_file= BytesIO()
             url_fetcher=django_url_fetcher
             template = 'confirm.html'
             
+            html_content = render_to_string('confirm.html', context)
             
-            render_pdf('confirm.html',pdf_file,content)
+            pdf = HTML(string=html_content).write_pdf()
+            pdf_file = BytesIO(pdf)
             
-            pdf_size =pdf_file.getbuffer().nbytes
-            print(pdf_size)
+            pdf_size = pdf_file.getbuffer().nbytes
             if pdf_size == 0:
-                return JsonResponse({'message':'Appointment approved but PDF generation failed!'},status =200)
+                return JsonResponse({'message': 'Appointment approved but PDF generation failed!'}, status=200)
+
             email_subject = "Appointment Confirmation"
-            email_body = "Please find attachment containing details of your appointment confirmation."
-            pdf_file.seek(0)
+            email_body = "Please find attached the details of your appointment confirmation."
             email = EmailMultiAlternatives(
-            email_subject,
-            email_body,
-            'nandinisingh52891@gmail.com',
-            [email_pat]
+                email_subject,
+                email_body,
+                'nandinisingh52891@gmail.com',  
+                [email_pat] 
             )
+            
+
             pdf_content = pdf_file.read()
-    
-            email.attach(f'appointment_{id}.pdf',pdf_content,'application/pdf')
+            email.attach(f'appointment_{id}.pdf', pdf_content, 'application/pdf')
             email.send()
             return JsonResponse({"message": "Appointment approved"}, status=200)
         
@@ -951,6 +956,8 @@ def create_prescription(request):
         user = request.user
         user_det = User.objects.filter(email=user).values()
         role = user_det[0]['role']
+        doctor = "Dr. "+user_det[0]['first_name']+" "+user_det[0]['last_name']
+        
 
         data = json.loads(request.body)
         appointment_id = data.get('appointment_id')
@@ -977,6 +984,61 @@ def create_prescription(request):
                 diagnosis=diagnosis
             )
         Appointment.objects.filter(id=appointment_id).update(is_prescribed=1)
+        app_det = Appointment.objects.filter(id= appointment_id).values()
+        email_pat = app_det[0]['email']
+        
+        det = Prescription.objects.filter(appointment_id = appointment_id).values()
+        print(det)
+        instruction = det[0]['instruction']
+        diagnosis = det[0]['diagnosis']
+        
+        details =[]
+        date =[]
+            
+        for item in det:
+            values = {
+                    'medicine':item['medicine'],
+                    'dosage':item['dosage'],
+                    'days':item['days']
+                }
+            date.append(values)
+        val = {
+                'appointment_id':appointment_id,
+                'doctor':doctor,
+                'instruction':instruction,
+                'diagnosis':diagnosis,
+                'medicine':date, 
+                }
+        details.append(val)
+        print(details)
+        dict_details = {}
+        for i in details:
+            dict_details.update(i)
+        
+        pdf_file= BytesIO()    
+        html_content = render_to_string('prescription.html', dict_details)
+            
+        pdf = HTML(string=html_content).write_pdf()
+        pdf_file = BytesIO(pdf)
+        
+        pdf_size = pdf_file.getbuffer().nbytes
+        if pdf_size == 0:
+            return JsonResponse({'message': 'Appointment approved but PDF generation failed!'}, status=200)
+
+        email_subject = "Prescription added!"
+        email_body = "Please find the detailed prescription in attachment."
+        email = EmailMultiAlternatives(
+            email_subject,
+            email_body,
+            'nandinisingh52891@gmail.com',  
+            [email_pat] 
+        )
+            
+
+        pdf_content = pdf_file.read()
+        email.attach(f'appointment_{appointment_id}.pdf', pdf_content, 'application/pdf')
+        email.send()
+
 
         return JsonResponse({'message': 'Prescription added'}, status=200)
     
