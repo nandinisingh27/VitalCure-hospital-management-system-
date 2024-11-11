@@ -10,23 +10,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.CreateModel(
-            name='Blood_group',
-            fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('blood_group', models.CharField(max_length=5)),
-            ],
-        ),
-        migrations.CreateModel(
-            name='Gender',
-            fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('gender', models.CharField(max_length=10)),
-            ],
-        ),
-        migrations.AlterField(
-            model_name='patient',
-            name='last_name',
-            field=models.CharField(max_length=6),
-        ),
+        
     ]

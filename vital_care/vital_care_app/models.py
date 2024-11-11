@@ -100,6 +100,7 @@ class Appointment(models.Model):
     visited_doc = models.BooleanField(default=False)
     payment_status = models.CharField(max_length=50,default="Pending")
     is_prescribed = models.BooleanField(default=False)
+    is_deleted = models.BooleanField(default =False)
     
     
 class Prescription(models.Model):

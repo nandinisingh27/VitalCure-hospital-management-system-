@@ -1,5 +1,4 @@
 import re
-from django_renderpdf.helpers import render_pdf
 from django.template.loader import render_to_string
 from weasyprint import HTML
 from django_renderpdf.helpers import django_url_fetcher
@@ -13,8 +12,10 @@ from django.contrib.auth.models import User
 from django.core.mail import EmailMessage
 from django.core.mail import send_mail
 from django.conf import settings
+from datetime import datetime
 from django.contrib.auth import get_user_model
 User = get_user_model()
+
 from .models import Doctor
 from .models import Patient
 from .models import Prescription
@@ -96,7 +97,8 @@ def patient_register(request):
         
         
         
-        date_of_birth = request.POST['date_of_birth']
+        date_of_birth= request.POST['date_of_birth']
+        
         if date_of_birth is  None:
             return JsonResponse({'error':'Please enter valid date of birth'},status =400)
 
@@ -379,7 +381,9 @@ def list_patients(request):
             pat_data = User.objects.filter(id =id).values()
             pat_details = Patient.objects.filter(user_id =id).values()
             img = pat_data[0]['image']
+            
             for det in pat_details:
+
                 val={
                 'image':img,
                 'first_name':det['first_name'],
@@ -489,9 +493,10 @@ def list_appointments(request):
         superuser = det[0]['is_superuser']
         is_doctor = det[0]['is_doctor']
         if superuser== True:
-            details = Appointment.objects.filter(visited = False).values()
+            details = Appointment.objects.filter(is_deleted = False).filter(visited = False).values()
             det=[]
             for item in details:
+
                 value = {
                     'id':item['id'],
                     'name':item['name'],
@@ -513,6 +518,7 @@ def list_appointments(request):
 
             det =[]
             for item in details_final:
+
                 values={
                     'id':item['id'],
                     'name':item['name'],
@@ -560,6 +566,9 @@ def approve_appoint(request):
             details = Appointment.objects.get(id =id)
             det = Appointment.objects.filter(id=id).values()
             email_pat = det[0]['email']
+            date= det[0]['preferred_date']
+            f_date = format_date(date)
+            print(f_date)
             approved=1
             details.is_approved_doc = approved
             details.visited_doc = approved
@@ -568,7 +577,7 @@ def approve_appoint(request):
             'name':det[0]['name'],
             'doctor_selected':det[0]['doctor_selected'],
             'reason':det[0]['reason'],
-            'preferred_date':det[0]['preferred_date']
+            'preferred_date':f_date
             }
             print(context)
             
@@ -725,6 +734,7 @@ def profile_details(request):
             name = f_name + " "+ l_name
             details = []
             for item in data:
+
                 val = {
                     'id':item['id'],
                     'name':name,
@@ -733,7 +743,7 @@ def profile_details(request):
                     'height':item['height'],
                     'weight':item['weight'],
                     'age':item['age'],
-                    'blood_group':item['blood_group'],
+                    'date_of_birth':item['date_of_birth'],
                     'medical_history':item['medical_history'],
                     'blood_group':item['blood_group'],
                     'address':item['address'],
@@ -751,6 +761,7 @@ def stats(request):
     if request.method =="GET":
         user= request.user
         data = User.objects.filter(email=user).values()
+        users_id = data[0]['id']
         
         role = data[0]['role']
         is_superuser = data[0]['is_superuser']
@@ -807,14 +818,25 @@ def stats(request):
             app = Appointment.objects.filter(name =name).count()
             if app==0:
                 return JsonResponse({'message':'No data found for this user'},status =200)
-            num = Appointment.objects.filter(name = name).filter(visited =1).filter(is_approved_recep =1).filter(visited_doc=1).filter(is_approved_doc =1).count()
-            app =Appointment.objects.filter(name = name).filter(visited =1).filter(is_approved_recep =1).filter(visited_doc=1).filter(is_approved_doc =1).filter(is_prescribed =1).values().order_by('-id')
-            appp=Appointment.objects.filter(name = name).filter(visited =1).filter(is_approved_recep =1).filter(visited_doc=1).filter(is_approved_doc =1).filter(is_prescribed =1).values()
-            appointment = Appointment.objects.filter(name = name).filter(visited =1).filter(is_approved_recep =1).filter(visited_doc=1).filter(is_approved_doc =1).filter(is_prescribed =1).count()
-            if appointment == 0:
-                return JsonResponse({'message':'Nothing to display on this page'},status=200)
-            id = appp[0]['id']
-            det = Prescription.objects.filter(appointment_id = id).values()
+            app =Appointment.objects.filter(name = name).values().order_by('-id').first()
+            
+            if app['visited']==1 and app['is_approved_recep'] ==1 and app['visited_doc']==1 and app['is_approved_doc']==1:
+                status = "Approved"
+            elif (app['visited']==1 and app['is_approved_recep'] ==0) or (app['visited_doc']==1 and app['is_approved_doc']==0):
+                status = "Rejected"
+            else:
+                status = "Pending"
+            rec_app = {
+                    'reason':app['reason'],
+                    'preferred_date':app['preferred_date'],
+                    'doctor':app['doctor_selected'],
+                    'status':status
+                    }
+            recent_pres = Prescription.objects.filter(user_id =users_id).values().order_by('-id').first()
+            app_id = recent_pres['appointment_id']
+            det = Prescription.objects.filter(appointment_id = app_id).values()       
+            date_info = Appointment.objects.filter(id = app_id).values()
+            app_date = date_info[0]['preferred_date']
             details =[]
             date =[]
             
@@ -826,15 +848,17 @@ def stats(request):
                 }
                 date.append(values)
             val = {
-                'appointment_id':id,
+                'date':app_date,
                 'instruction':item['instruction'],
                 'diagnosis':item['diagnosis'],
                 'medicine':date, 
-                'number':num,
                 'role':role             
                 }
             details.append(val)
-            return JsonResponse({'details':details},status =200)    
+            list1 = []
+            list1.append(rec_app)
+            list1.append(details)
+            return JsonResponse({'details':list1},status =200)    
     else:
         return JsonResponse({'error':'Invalid Method'},status =405)           
     
@@ -847,10 +871,11 @@ def doc_patients(request):
         if is_doctor ==True:
             doc_det = Doctor.objects.filter(email =user).values()
             name = "Dr. "+doc_det[0]['first_name']+ " "+ doc_det[0]['last_name']
-            det = Appointment.objects.filter(doctor_selected = name).filter(visited=1).filter(is_approved_recep =1).filter(visited_doc=1).filter(is_approved_doc=1).values()
+            det = Appointment.objects.filter(doctor_selected = name).filter(visited=1).filter(is_approved_recep =1).filter(visited_doc=1).filter(is_approved_doc=1).values().order_by('is_prescribed')
         
             info =[]
             for item in det:
+
                 val = {
                     'id':item['id'],
                 'name':item['name'],
@@ -879,6 +904,7 @@ def list_appointment_reports(request):
             data = Appointment.objects.all().values().order_by('-id')
             details =[]
             for item in data:
+
                 val = {
                     'id':item['id'],
                     'email':item['email'],
@@ -905,6 +931,7 @@ def list_appointment_reports(request):
             data = Appointment.objects.filter(doctor_selected = name1).filter(visited =1).filter(is_approved_recep=1).values().order_by('-id')
             details =[]
             for item in data:
+
                 val = {
                     'id':item['id'],
                     'email':item['email'],
@@ -926,21 +953,23 @@ def list_appointment_reports(request):
             return JsonResponse({'details':details,'url':'records','role':role},status =200)
         else:
             name = user_det[0]['first_name']+ " "+ user_det[0]['last_name']
-            data = Appointment.objects.filter(name = name).values().order_by('-id')
+            data = Appointment.objects.filter(name = name).filter(is_deleted =False).values().order_by('-id')
             details =[]
             for item in data:
+                
                 val = {
                     'id':item['id'],
                     'email':item['email'],
                     'preferred_date':item['preferred_date'],
                     'doctor':item['doctor_selected'],
-                    'reason':item['reason']
+                    'reason':item['reason'],
+                    'visited_recep':item['visited']
                 }
                 details.append(val)
                 if item['is_approved_doc'] == 1:
                     status = "Approved"
                     val["status"] = status
-                elif item['visited_doc'] == 1 and item['is_approved_doc']==0:
+                elif (item['visited_doc'] == 1 and item['is_approved_doc']==0) or (item['visited']==1 and item['is_approved_recep']==0):
                     status = "Rejected"
                     val["status"] = status
 
@@ -964,12 +993,10 @@ def create_prescription(request):
         instruction = data.get('instruction')
         diagnosis = data.get('diagnosis')
         day = data.get('day', [])
-        print(day)
         dosage = data.get('dosage', [])
-        print(dosage)
         medicines = data.get('medicine', [])
-        print(medicines)
-        print(len(day))
+        app_det = Appointment.objects.filter(id =appointment_id).values()
+        users_id = app_det[0]['user_id']
         for i in range(len(day)):
         
             days = day[i] 
@@ -981,49 +1008,33 @@ def create_prescription(request):
                 medicine=medicine_name,
                 dosage=dose,
                 days=days,
-                diagnosis=diagnosis
+                diagnosis=diagnosis,
+                user_id =users_id
             )
         Appointment.objects.filter(id=appointment_id).update(is_prescribed=1)
         app_det = Appointment.objects.filter(id= appointment_id).values()
         email_pat = app_det[0]['email']
         
         det = Prescription.objects.filter(appointment_id = appointment_id).values()
-        print(det)
         instruction = det[0]['instruction']
         diagnosis = det[0]['diagnosis']
+        zipped_prescriptions = zip(medicines, dosage, day)
         
-        details =[]
-        date =[]
-            
-        for item in det:
-            values = {
-                    'medicine':item['medicine'],
-                    'dosage':item['dosage'],
-                    'days':item['days']
-                }
-            date.append(values)
-        val = {
-                'appointment_id':appointment_id,
-                'doctor':doctor,
-                'instruction':instruction,
-                'diagnosis':diagnosis,
-                'medicine':date, 
-                }
-        details.append(val)
-        print(details)
-        dict_details = {}
-        for i in details:
-            dict_details.update(i)
-        
+        final_dict = {
+            'doctor': doctor,
+            'diagnosis': diagnosis,
+            'instruction': instruction,
+            'prescriptions': list(zipped_prescriptions),
+        }
         pdf_file= BytesIO()    
-        html_content = render_to_string('prescription.html', dict_details)
+        html_content = render_to_string('prescription.html',final_dict)
             
         pdf = HTML(string=html_content).write_pdf()
         pdf_file = BytesIO(pdf)
         
         pdf_size = pdf_file.getbuffer().nbytes
         if pdf_size == 0:
-            return JsonResponse({'message': 'Appointment approved but PDF generation failed!'}, status=200)
+            return JsonResponse({'message': 'Prescription added but PDF generation failed!'}, status=200)
 
         email_subject = "Prescription added!"
         email_body = "Please find the detailed prescription in attachment."
@@ -1033,15 +1044,10 @@ def create_prescription(request):
             'nandinisingh52891@gmail.com',  
             [email_pat] 
         )
-            
-
         pdf_content = pdf_file.read()
         email.attach(f'appointment_{appointment_id}.pdf', pdf_content, 'application/pdf')
         email.send()
-
-
         return JsonResponse({'message': 'Prescription added'}, status=200)
-    
     return JsonResponse({'error': 'Invalid method'}, status=405)
             
             
@@ -1049,40 +1055,41 @@ def list_prescription(request):
     if request.method =="GET":
         user = request.user
         user_det = User.objects.filter(email = user).values()
-        role = user_det[0]['role']
         is_patient= user_det[0]['is_patient']
         if is_patient == True:
             name =user_det[0]['first_name']+ " "+ user_det[0]['last_name']
             det = Appointment.objects.filter(name = name).filter(is_prescribed = 1).count()
             if det==0:
                 return JsonResponse({'message':'Currently, no data exists for this user'},status =200)
-                
             app_det = Appointment.objects.filter(name = name).filter(is_prescribed = 1).values()
-            doctor = app_det[0]['doctor_selected']
-            id = app_det[0]['id']
-            det = Prescription.objects.filter(appointment_id = id).values()
-            dt= Prescription.objects.filter(appointment_id = id).count()
-            if dt==0:
-                return JsonResponse({'message':'Currently, no data exists for this user'},status =200)
-            details =[]
-            date =[]
             
-            for item in det:
-                values = {
+            list2=[]
+            for item in app_det:
+                date = item['preferred_date']
+                doctor = item['doctor_selected']
+                id = item['id']
+                pres_det = Prescription.objects.filter(appointment_id = id).values()
+                cnt_pres = Prescription.objects.filter(appointment_id = id).count()
+                list1=[]
+                if cnt_pres==0:
+                    return JsonResponse({'message':'Currently, no data exists for this user'},status =200)
+                for item in pres_det:
+                    values = {
                     'medicine':item['medicine'],
                     'dosage':item['dosage'],
                     'days':item['days']
-                }
-                date.append(values)
-            val = {
-                'appointment_id':id,
-                'doctor':doctor,
-                'instruction':item['instruction'],
-                'diagnosis':item['diagnosis'],
-                'medicine':date, 
-                }
-            details.append(val)
-            return JsonResponse({'list':details},status =200)
+                    }
+                    list1.append(values)
+                val = {
+                        'id':id,
+                        'date':date,
+                        'doctor':doctor,
+                        'instruction':item['instruction'],
+                        'diagnosis':item['diagnosis'],
+                        'medicine':list1, 
+                    }
+                list2.append(val)                
+            return JsonResponse({'list':list2},status =200)
         else:
             return JsonResponse({'error':'You are not allowed to access this page!'},status = 400)
     else:
@@ -1123,9 +1130,31 @@ def list_doc_pres(request):
             return JsonResponse({'error':'You are not allowed to access this page!'},status = 400)
     else:
         return JsonResponse({'error':'Invalid method'},status =405)
-        
-    
 
+def delete_appointment(request):
+    if request.method =="PATCH":
+        user = request.user
+        user_det = User.objects.filter(email = user).values()
+        pat = user_det[0]['is_patient']
+        if pat:
+            data = json.loads(request.body)
+            id = data.get('id')
+            if Appointment.objects.filter(id = id).exists():
+                Appointment.objects.filter(id = id).update(is_deleted =1)
+                return JsonResponse({'message':'Appointment successfully deleted'},status = 200)
+            else:
+                return JsonResponse({'error':'Appointment ID is invalid'},status =400)
+        else:
+            return JsonResponse({'error':'You are not allowed to delete appointment'},status =401)
+            
+    else:
+        return JsonResponse({'error':'Invalid Method'},status =405)
+        
+        
+def format_date(date_string):
+    date_obj = datetime.strptime(date_string, "%Y-%m-%dT%H:%M:%S.%fZ")
+    f_date = date_obj.strftime("%Y-%m-%d")
+    return f_date
             
 
             
