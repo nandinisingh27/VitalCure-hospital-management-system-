@@ -493,7 +493,7 @@ def list_appointments(request):
         superuser = det[0]['is_superuser']
         is_doctor = det[0]['is_doctor']
         if superuser== True:
-            details = Appointment.objects.filter(is_deleted = False).filter(visited = False).values()
+            details = Appointment.objects.filter(is_deleted = False).filter(visited = False).values().order_by('-id')
             det=[]
             for item in details:
 
@@ -858,7 +858,7 @@ def stats(request):
             list1 = []
             list1.append(rec_app)
             list1.append(details)
-            return JsonResponse({'details':list1},status =200)    
+            return JsonResponse({'details':details},status =200)    
     else:
         return JsonResponse({'error':'Invalid Method'},status =405)           
     
