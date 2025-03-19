@@ -5,6 +5,7 @@ from django.contrib.auth.models import AbstractUser
 from .manager import UserManager
 from django.utils import timezone
 
+from django.contrib.auth.models import User
 
 
 class User(AbstractUser):

@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 from pathlib import Path
 import os
+from .secrets import *
 # import razorpay
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,7 +22,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-#deli9rx3^zv-g=5t#yw_)+bcw$a469kp$1og39jjoa_)h#v_4'
+SECRET_KEY = SECRET_KEY
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -88,12 +89,12 @@ WSGI_APPLICATION = 'vital_care.wsgi.application'
 
 DATABASES = {
     'default': {
-        "ENGINE": "django.db.backends.mysql",
-        "NAME": "vital_care_db",
-        "USER": "root",
-        "PASSWORD": "Nandini@2004",
-        "HOST": "127.0.0.1",
-        "PORT": "3306",
+        "ENGINE": ENGINE,
+        "NAME": NAME,
+        "USER": USER,
+        "PASSWORD": PASSWORD,
+        "HOST": HOST,
+        "PORT": PORT,
     }
 }
 
@@ -129,6 +130,10 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'nandinisingh52891@gmail.com'
 EMAIL_HOST_PASSWORD = 'lgnd gwli oyle qfjm'
+EMAIL_USE_TLS = True
+EMAIL_USE_SSL = False
+
+
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
 

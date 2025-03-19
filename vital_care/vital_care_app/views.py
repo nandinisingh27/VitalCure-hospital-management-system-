@@ -9,9 +9,7 @@ from django.contrib.auth import authenticate, login, logout
 import json
 from django.http import JsonResponse
 from django.contrib.auth.models import User
-from django.core.mail import EmailMessage
 from django.core.mail import send_mail
-from django.conf import settings
 from datetime import datetime
 from django.contrib.auth import get_user_model
 User = get_user_model()
