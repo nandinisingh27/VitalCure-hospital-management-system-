@@ -1,4 +1,4 @@
-vital_care/secrets.py
+# vital_care/secrets.py
 *.pyc
 __pycache__/
 env/
