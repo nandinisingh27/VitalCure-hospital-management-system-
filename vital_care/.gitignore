@@ -1,1 +1,7 @@
 vital_care/secrets.py
+*.pyc
+__pycache__/
+env/
+venv/
+*.sqlite3
+.env
