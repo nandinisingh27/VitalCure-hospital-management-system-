@@ -9,7 +9,7 @@ ENGINE="django.db.backends.mysql"
 
 NAME="nandini_vital_care_db"
 USER="nandini"
-PASSWORD="Nandini@2005"
+PASSWORD="Nandini@2004"
 HOST="mysql-nandini.alwaysdata.net"
 PORT=3306
 
