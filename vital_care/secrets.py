@@ -7,10 +7,10 @@ ENGINE="django.db.backends.mysql"
 # PASSWORD ="Nandini@2005"
 
 
-NAME="sql12777831"
-USER="sql12777831"
-PASSWORD="b4lkJYjs2s"
-HOST=" sql12.freesqldatabase.com"
+NAME="nandini_vital_care_db"
+USER="nandini"
+PASSWORD="Nandini@2005"
+HOST="mysql-nandini.alwaysdata.net"
 PORT=3306
 
 
