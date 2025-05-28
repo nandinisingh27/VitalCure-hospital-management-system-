@@ -69,7 +69,7 @@ def patient_register(request):
         else:
             return JsonResponse({'error':'Please enter valid weight'},status =400)
         
-        age = str(request.POST['age'])
+        # age = str(request.POST['age'])
         # if age is not None:
         #     if not bool(re.match(r"^[0-9]\d*(\.\d+)?$",age)):
         #         return JsonResponse({'error':'Please enter valid age'},status =400)
@@ -118,7 +118,7 @@ def patient_register(request):
         
 
         user = User.objects.create_user(email=email,first_name=first_name,last_name=last_name,role = "Patient",is_doctor=0,is_patient=1,password=password,image = image)
-        Patient.objects.create(user =user,email =email,first_name = first_name,last_name = last_name,phone_number= phone_number,height = height,weight =weight,age =age,gender = gender,blood_group = blood_group,medical_history = medical_history,date_of_birth=date_of_birth,address=address)
+        Patient.objects.create(user =user,email =email,first_name = first_name,last_name = last_name,phone_number= phone_number,height = height,weight =weight,gender = gender,blood_group = blood_group,medical_history = medical_history,date_of_birth=date_of_birth,address=address)
         mail =send_mail(
             " Account created",
             "Your VITALCURE patient account has been successfully created!!",
@@ -158,7 +158,7 @@ def doctor_register(request):
         else:
             return JsonResponse({'error':'Please upload a valid image '},status =400)
         
-        age = str(request.POST['age'])
+        # age = str(request.POST['age'])
         # if age is not None:
         #     if not bool(re.match(r"^[0-9]\d*(\.\d+)?$",age)):
         #         return JsonResponse({'error':'Please enter valid age'},status =400)
@@ -207,7 +207,7 @@ def doctor_register(request):
         if User.objects.filter(email = email).exists():
             return JsonResponse({'error': 'User already exists!!,please try with another email address'},status=400)
         user  = User.objects.create_user(email=email,first_name=first_name,last_name=last_name,role = "Doctor",is_doctor=1,is_patient=0,password=password ,image =image)
-        Doctor.objects.create(user = user ,spec_id = spec_id,email =email,first_name = first_name,last_name = last_name,phone_number= phone_number,age=age,gender = gender,specialist=specialist,experience =experience,qualification=qualification,consultation_fee = consultation_fee)
+        Doctor.objects.create(user = user ,spec_id = spec_id,email =email,first_name = first_name,last_name = last_name,phone_number= phone_number,gender = gender,specialist=specialist,experience =experience,qualification=qualification,consultation_fee = consultation_fee)
         mail = send_mail(
             " Account created",
             "Your VITALCURE doctor account has been successfully created!!",
