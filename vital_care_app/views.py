@@ -70,11 +70,11 @@ def patient_register(request):
             return JsonResponse({'error':'Please enter valid weight'},status =400)
         
         age = str(request.POST['age'])
-        if age is not None:
-            if not bool(re.match(r"^[0-9]\d*(\.\d+)?$",age)):
-                return JsonResponse({'error':'Please enter valid age'},status =400)
-        else:
-            return JsonResponse({'error':'Please enter valid age'},status =400)
+        # if age is not None:
+        #     if not bool(re.match(r"^[0-9]\d*(\.\d+)?$",age)):
+        #         return JsonResponse({'error':'Please enter valid age'},status =400)
+        # else:
+        #     return JsonResponse({'error':'Please enter valid age'},status =400)
         
         gender = request.POST['gender']
         if gender is not None:
@@ -159,11 +159,11 @@ def doctor_register(request):
             return JsonResponse({'error':'Please upload a valid image '},status =400)
         
         age = str(request.POST['age'])
-        if age is not None:
-            if not bool(re.match(r"^[0-9]\d*(\.\d+)?$",age)):
-                return JsonResponse({'error':'Please enter valid age'},status =400)
-        else:
-            return JsonResponse({'error':'Please enter valid age'},status =400)
+        # if age is not None:
+        #     if not bool(re.match(r"^[0-9]\d*(\.\d+)?$",age)):
+        #         return JsonResponse({'error':'Please enter valid age'},status =400)
+        # else:
+        #     return JsonResponse({'error':'Please enter valid age'},status =400)
         
         phone_number = request.POST['phone_number']
         if phone_number is not None:
